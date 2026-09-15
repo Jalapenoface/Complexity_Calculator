@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import json
 import re
-from html import unescape
+from html import unescape, escape
 from datetime import datetime
 from pathlib import Path
 from collections import Counter
@@ -136,6 +136,11 @@ def index():
     return render_template("index.html")
 
 
+@app.get("/health")
+def health():
+    return {"status": "ready"}, 200, {"Cache-Control": "no-store"}
+
+
 @app.post("/export/<kind>")
 def export(kind):
     if kind not in {"pdf", "xlsx"}:
@@ -153,6 +158,8 @@ def export_pdf(report):
     doc = SimpleDocTemplate(output, pagesize=letter, rightMargin=.55*inch, leftMargin=.55*inch,
                             topMargin=.55*inch, bottomMargin=.55*inch)
     styles = getSampleStyleSheet()
+    def cell(value):
+        return Paragraph(escape(str(value)).replace("\n", "<br/>"), styles["BodyText"])
     styles["Title"].textColor = colors.HexColor("#4338CA")
     story = [Paragraph("ICC Course Operational Complexity", styles["Title"]), Spacer(1, 10)]
     m = report["meta"]
@@ -161,6 +168,7 @@ def export_pdf(report):
         ["Filled by", m["filled_by"] or "—", "Date", m["date"] or "—"],
         ["Semester", m["semester"] or "—", "Year", m["year"] or "—"],
     ]
+    metadata = [[cell(value) for value in row] for row in metadata]
     meta_table = Table(metadata, colWidths=[.85*inch, 2.15*inch, .75*inch, 2.4*inch])
     meta_table.setStyle(TableStyle([("BACKGROUND", (0,0), (0,-1), colors.HexColor("#E0E7FF")),
                                     ("BACKGROUND", (2,0), (2,-1), colors.HexColor("#E0E7FF")),
@@ -173,11 +181,11 @@ def export_pdf(report):
 
     detail = [["Category", "Component", "Qty", "Unit pts", "Total pts"],
               ["Enrollment", f"Class cap: {m['class_cap']}", "1", display_number(report["cap_points"]), display_number(report["cap_points"])]]
-    detail += [[r["category"], Paragraph(r["item"], styles["BodyText"]), str(r["quantity"]),
+    detail += [[cell(r["category"]), cell(r["item"]), str(r["quantity"]),
                 display_number(r["unit_points"]), display_number(r["points"])] for r in report["rows"]]
     if len(detail) == 2 and not report["rows"]:
         detail.append(["—", "No components selected", "—", "0", "0"])
-    table = Table(detail, repeatRows=1, colWidths=[1.25*inch, 3.35*inch, .45*inch, .7*inch, .8*inch])
+    table = Table(detail, repeatRows=1, colWidths=[1.75*inch, 2.85*inch, .45*inch, .7*inch, .8*inch])
     table.setStyle(TableStyle([("BACKGROUND", (0,0), (-1,0), colors.HexColor("#4338CA")),
                                ("TEXTCOLOR", (0,0), (-1,0), colors.white), ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
                                ("GRID", (0,0), (-1,-1), .35, colors.HexColor("#CBD5E1")),
@@ -188,6 +196,7 @@ def export_pdf(report):
     breakdown = [["Enrollment", display_number(report["cap_points"])]] + [
         [CATEGORY_LABELS[k], display_number(v)] for k, v in report["breakdown"].items()
     ] + [["TOTAL", display_number(report["total"])]]
+    breakdown = [[cell(label), points] for label, points in breakdown]
     bt = Table(breakdown, colWidths=[3.2*inch, 1*inch])
     bt.setStyle(TableStyle([("GRID", (0,0), (-1,-1), .35, colors.HexColor("#CBD5E1")),
                             ("BACKGROUND", (0,-1), (-1,-1), colors.HexColor("#E0E7FF")),
@@ -197,9 +206,9 @@ def export_pdf(report):
     if report["context"] or report["notes"]:
         story += [Spacer(1, 14), Paragraph("Notes", styles["Heading2"])]
         if report["context"]:
-            story += [Paragraph("Changes this semester", styles["Heading3"]), Paragraph(report["context"].replace("\n", "<br/>"), styles["BodyText"])]
+            story += [Paragraph("Changes this semester", styles["Heading3"]), cell(report["context"])]
         if report["notes"]:
-            story += [Paragraph("Final notes", styles["Heading3"]), Paragraph(report["notes"].replace("\n", "<br/>"), styles["BodyText"])]
+            story += [Paragraph("Final notes", styles["Heading3"]), cell(report["notes"])]
     doc.build(story)
     output.seek(0)
     return send_file(output, as_attachment=True, download_name=f"{file_stem(report)}_complexity_report.pdf", mimetype="application/pdf")
@@ -250,6 +259,11 @@ def export_xlsx(report):
     output = io.BytesIO(); wb.save(output); output.seek(0)
     return send_file(output, as_attachment=True, download_name=f"{file_stem(report)}_complexity_report.xlsx",
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
 
 
 if __name__ == "__main__":
