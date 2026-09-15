@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ICC Course Operational Complexity Calculator</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Space Grotesk', sans-serif; }
+    .category-card { transition: all 0.3s ease; align-self: start; min-width: 0; }
+    .category-card:hover { transform: translateY(-2px); }
+    .checkbox-item {
+      transition: all 0.2s ease;
+      display: grid !important;
+      grid-template-columns: auto minmax(0, 1fr) auto auto;
+      align-items: center;
+      column-gap: .55rem;
+    }
+    .checkbox-item:hover { background: rgba(255,255,255,0.1); }
+    .checkbox-item > .flex-1 { min-width: 0; overflow-wrap: anywhere; }
+    .checkbox-item > span:last-child { min-width: 2.3rem; text-align: right; white-space: nowrap; }
+    .qty-control { display: inline-flex; align-items: center; gap: .25rem; color: #94a3b8; font-size: .7rem; white-space: nowrap; }
+    .quantity-input { width: 2.9rem; min-width: 0; padding: .2rem .25rem; color: white; background: #334155; border: 1px solid #475569; border-radius: .35rem; text-align: center; }
+    .custom-entry-row {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) 4.2rem auto;
+      gap: .45rem;
+      align-items: center;
+    }
+    .custom-entry-row > span:first-child { grid-column: 1 / -1; }
+    .custom-entry-row > input[type="text"] { width: 100%; min-width: 0; }
+    .custom-entry-row > input[type="number"] { width: 100% !important; min-width: 0; }
+    .custom-entry-row .qty-control { justify-self: end; }
+    @media (max-width: 420px) {
+      .checkbox-item { grid-template-columns: auto minmax(0, 1fr) auto; }
+      .checkbox-item > .qty-control { grid-column: 2; justify-self: start; margin-top: .25rem; }
+      .checkbox-item > span:last-child { grid-column: 3; grid-row: 1 / span 2; }
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+ </head>
+ <body class="h-full bg-slate-900 text-white overflow-auto">
+  <form id="calculator-form" method="post">
+   <input type="hidden" name="payload" id="export-payload">
+  <div class="h-full w-full bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
+   <div class="max-w-6xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="text-center mb-8">
+     <h1 id="app-title" class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-2">ICC Course Operational Complexity</h1>
+     <p class="text-slate-400 max-w-2xl mx-auto">Calculate your course's operational complexity score.</p>
+    </header><!-- Form Header Section -->
+    <div class="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-slate-700/50 mb-12 grid lg:grid-cols-6 md:grid-cols-3 gap-4">
+     <div><label class="block text-slate-300 text-sm mb-2">Class Code</label> <input type="text" id="class-code" placeholder="Enter code" class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
+     </div>
+     <div><label class="block text-slate-300 text-sm mb-2">Class Cap</label> <input type="number" id="class-cap" placeholder="0" min="0" class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
+      <p class="text-slate-400 text-xs mt-1">0-599: +0 | 600-999: +1 | 1000+: +2</p>
+     </div>
+     <div><label class="block text-slate-300 text-sm mb-2">Filled by <span class="text-indigo-400 font-bold">(Name)</span></label> <input type="text" id="filled-by" placeholder="Enter name" class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
+     </div>
+     <div><label class="block text-slate-300 text-sm mb-2">Date</label> <input type="date" id="form-date" class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
+     </div>
+     <div><label class="block text-slate-300 text-sm mb-2">Semester</label> <select id="semester" class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm"><option value="">Select semester</option><option value="fall">Fall</option><option value="winter">Winter</option><option value="spring">Spring</option><option value="summer">Summer</option></select>
+     </div>
+     <div><label class="block text-slate-300 text-sm mb-2">Year</label> <input type="number" id="year" placeholder="2024" min="2000" max="2100" class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
+     </div>
+    </div><!-- Categories organized by section -->
+    <div class="space-y-12 mb-12">
+     <!-- Core Assessment Tools -->
+     <div>
+      <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Core Assessment Tools</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+       <!-- Assessments -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-emerald-400">Assessments</h3>
+        </div>
+        <p class="text-slate-400 text-xs mb-2">Excluding quizzes · select all that apply</p>
+        <div class="space-y-2 mb-4"><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="0.25" data-category="assessments" class="w-4 h-4 rounded"><span class="flex-1">Simple Upload</span><span class="text-emerald-400">+0.25</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="assessments" class="w-4 h-4 rounded"><span class="flex-1">Complex Uploads</span><span class="text-emerald-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="assessments" class="w-4 h-4 rounded"><span class="flex-1">Graded Database</span><span class="text-emerald-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="assessments" class="w-4 h-4 rounded"><span class="flex-1">Graded Lesson Activity</span><span class="text-emerald-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="assessments" class="w-4 h-4 rounded"><span class="flex-1">Graded Forum</span><span class="text-emerald-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="3" data-category="assessments" class="w-4 h-4 rounded"><span class="flex-1">Workshop</span><span class="text-emerald-400">+3</span></label>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="assessments-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="assessments-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div><!-- Forums -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-yellow-400">Forums Setup</h3>
+        </div>
+        <div class="space-y-3 mb-4">
+         <div>
+          <p class="font-semibold text-slate-300 text-sm mb-1">Choose one</p><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="forum-structure" data-points="0.25" data-category="forums" class="w-4 h-4 rounded"><span class="flex-1">Simple Forum <small class="block text-slate-400">One post per student; simple setup</small></span><span class="text-yellow-400">+0.25</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="forum-structure" data-points="1" data-category="forums" class="w-4 h-4 rounded"><span class="flex-1">Medium Complexity Forum <small class="block text-slate-400">Post and respond, multiple prompts, etc.</small></span><span class="text-yellow-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="forum-structure" data-points="2" data-category="forums" class="w-4 h-4 rounded"><span class="flex-1">Complex Forum <small class="block text-slate-400">Multiple activities or many prompts</small></span><span class="text-yellow-400">+2</span></label>
+         </div>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="forums-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="forums-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div><!-- Quizzes -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7 12a5 5 0 1110 0 5 5 0 01-10 0z" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-purple-400">Quizzes</h3>
+        </div>
+        <div class="space-y-3 mb-4">
+         <div>
+          <p class="font-semibold text-slate-300 text-sm mb-1">Question Bank Complexity</p><p class="text-slate-400 text-xs mb-1">Categories, frequent updating, professor factors, etc.</p><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="question-bank" data-points="0.25" data-category="quizzes" class="w-4 h-4 rounded"><span class="flex-1">Low</span><span class="text-purple-400">+0.25</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="question-bank" data-points="1" data-category="quizzes" class="w-4 h-4 rounded"><span class="flex-1">Medium</span><span class="text-purple-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="question-bank" data-points="2" data-category="quizzes" class="w-4 h-4 rounded"><span class="flex-1">High</span><span class="text-purple-400">+2</span></label>
+         </div>
+         <div>
+          <p class="font-semibold text-slate-300 text-sm mb-1">Question Types</p><p class="text-slate-400 text-xs mb-1">Calculated, cloze, short answer</p><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="question-types" data-points="0.25" data-category="quizzes" class="w-4 h-4 rounded"><span class="flex-1">Low</span><span class="text-purple-400">+0.25</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="question-types" data-points="1" data-category="quizzes" class="w-4 h-4 rounded"><span class="flex-1">Medium</span><span class="text-purple-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="question-types" data-points="2" data-category="quizzes" class="w-4 h-4 rounded"><span class="flex-1">High</span><span class="text-purple-400">+2</span></label>
+         </div>
+         <div>
+          <p class="font-semibold text-slate-300 text-sm mb-1">Quiz Setup</p><p class="text-slate-400 text-xs mb-1">Sections, randomization, frequent timing changes, etc.</p><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="quiz-setup" data-points="0.25" data-category="quizzes" class="w-4 h-4 rounded"><span class="flex-1">Low</span><span class="text-purple-400">+0.25</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="quiz-setup" data-points="1" data-category="quizzes" class="w-4 h-4 rounded"><span class="flex-1">Medium</span><span class="text-purple-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="quiz-setup" data-points="2" data-category="quizzes" class="w-4 h-4 rounded"><span class="flex-1">High</span><span class="text-purple-400">+2</span></label>
+         </div>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="quizzes-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="quizzes-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div>
+      </div>
+     </div><!-- Grading & Feedback -->
+     <div>
+      <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Grading &amp; Feedback</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+       <!-- Grading Tools -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-rose-400">Grading Tools</h3>
+        </div>
+        <p class="text-slate-400 text-xs mb-2">Choose one</p>
+        <div class="space-y-2 mb-4"><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="grading-tool" data-points="0.25" data-category="grading-tools" class="w-4 h-4 rounded"><span class="flex-1">Simple Direct Grading</span><span class="text-rose-400">+0.25</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="grading-tool" data-points="1" data-category="grading-tools" class="w-4 h-4 rounded"><span class="flex-1">Offline Grading</span><span class="text-rose-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="grading-tool" data-points="2" data-category="grading-tools" class="w-4 h-4 rounded"><span class="flex-1">Forum Rubric</span><span class="text-rose-400">+2</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="grading-tool" data-points="2" data-category="grading-tools" class="w-4 h-4 rounded"><span class="flex-1">Assignment Rubric</span><span class="text-rose-400">+2</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="grading-tool" data-points="2" data-category="grading-tools" class="w-4 h-4 rounded"><span class="flex-1">Forum Marking Guide</span><span class="text-rose-400">+2</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="grading-tool" data-points="2" data-category="grading-tools" class="w-4 h-4 rounded"><span class="flex-1">Assignment Marking Guide</span><span class="text-rose-400">+2</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="grading-tool" data-points="1" data-category="grading-tools" class="w-4 h-4 rounded"><span class="flex-1">Simple Checklist</span><span class="text-rose-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="grading-tool" data-points="2" data-category="grading-tools" class="w-4 h-4 rounded"><span class="flex-1">Complex Checklist</span><span class="text-rose-400">+2</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="grading-tool" data-points="2" data-category="grading-tools" class="w-4 h-4 rounded"><span class="flex-1">3rd Party Grades Import</span><span class="text-rose-400">+2</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="grading-tool" data-points="1" data-category="grading-tools" class="w-4 h-4 rounded"><span class="flex-1">Peer Evaluation (excluding Workshop)</span><span class="text-rose-400">+1</span></label>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="grading-tools-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="grading-tools-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div><!-- Gradebook -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-amber-400">Gradebook</h3>
+        </div>
+        <div class="space-y-3 mb-4">
+         <div>
+          <p class="font-semibold text-slate-300 text-sm mb-1">Grading Schemes (choose one)</p><p class="text-slate-400 text-xs mb-1">Formulas and categories</p><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="gradebook" data-points="1" data-category="gradebook" class="w-4 h-4 rounded"><span class="flex-1">Medium Complexity Grading Schemes</span><span class="text-amber-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="gradebook" data-points="2" data-category="gradebook" class="w-4 h-4 rounded"><span class="flex-1">High Complexity / Multiple Grading Schemes</span><span class="text-amber-400">+2</span></label>
+         </div>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="gradebook-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="gradebook-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div>
+      </div>
+     </div><!-- Organization & Moderation -->
+     <div>
+      <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Organization &amp; Moderation</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+       <!-- Manual Intervention -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m6 2a6 6 0 11-12 0 6 6 0 0112 0zM12 9v2m0 4v2m4-6h2m-6 0h2" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-cyan-400">Manual Intervention Components</h3>
+        </div>
+        <p class="text-slate-400 text-xs mb-2">Graded or non-graded · select all that apply</p>
+        <div class="space-y-2 mb-4"><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="manual-intervention" class="w-4 h-4 rounded"><span class="flex-1">Manual Glossary Copy</span><span class="text-cyan-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="manual-intervention" class="w-4 h-4 rounded"><span class="flex-1">Manual Forum Prompt Copy, Simple</span><span class="text-cyan-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="2" data-category="manual-intervention" class="w-4 h-4 rounded"><span class="flex-1">Manual Forum Prompt Copy, Complex</span><span class="text-cyan-400">+2</span></label>
+        </div>
+        <div class="border-t border-slate-600 pt-2 mb-2"><div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Gamification or interactivity:</span><input type="number" min="0" step="0.25" placeholder="pts" id="manual-intervention-gamification-pts" class="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"></div></div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="manual-intervention-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="manual-intervention-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div><!-- Restrictions -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-indigo-400">Restrictions</h3>
+        </div>
+        <div class="space-y-2 mb-4"><p class="font-semibold text-slate-300 text-sm">Complexity (choose one)</p><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="restriction-level" data-points="0.25" data-category="restrictions" class="w-4 h-4 rounded"><span class="flex-1">Low Complexity</span><span class="text-indigo-400">+0.25</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="restriction-level" data-points="1" data-category="restrictions" class="w-4 h-4 rounded"><span class="flex-1">Medium Complexity</span><span class="text-indigo-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="restriction-level" data-points="2" data-category="restrictions" class="w-4 h-4 rounded"><span class="flex-1">High Complexity</span><span class="text-indigo-400">+2</span></label><p class="font-semibold text-slate-300 text-sm mt-2">Additional factor</p><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="restrictions" class="w-4 h-4 rounded"><span class="flex-1">Has Conditional Logic (if, then)</span><span class="text-indigo-400">+1</span></label>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="restrictions-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="restrictions-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div><!-- Groups -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 10H9m6 0a6 6 0 11-12 0 6 6 0 0112 0z" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-teal-400">Groups Complexity</h3>
+        </div>
+        <div class="space-y-2 mb-4">
+         <p class="font-semibold text-slate-300 text-sm">Group Self-Selection Activity (choose one)</p><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="self-selection" data-points="1" data-category="groups" class="w-4 h-4 rounded"><span class="flex-1">Medium Complexity (not too many)</span><span class="text-teal-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="self-selection" data-points="2" data-category="groups" class="w-4 h-4 rounded"><span class="flex-1">High Complexity (multiple)</span><span class="text-teal-400">+2</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="self-selection" data-points="3" data-category="groups" class="w-4 h-4 rounded"><span class="flex-1">Insane Complexity (tons)</span><span class="text-teal-400">+3</span></label>
+         <p class="font-semibold text-slate-300 text-sm mt-2">Groups for Assignments (choose one)</p><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="assignment-groups" data-points="1" data-category="groups" class="w-4 h-4 rounded"><span class="flex-1">Medium Complexity (not too many)</span><span class="text-teal-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="assignment-groups" data-points="2" data-category="groups" class="w-4 h-4 rounded"><span class="flex-1">High Complexity (multiple)</span><span class="text-teal-400">+2</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="assignment-groups" data-points="3" data-category="groups" class="w-4 h-4 rounded"><span class="flex-1">Insane Complexity (tons)</span><span class="text-teal-400">+3</span></label><p class="font-semibold text-slate-300 text-sm mt-2">Additional factors</p><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="groups" class="w-4 h-4 rounded"><span class="flex-1">Has Supergroups</span><span class="text-teal-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="groups" class="w-4 h-4 rounded"><span class="flex-1">Requires ACSD Overrides (timed assessments)</span><span class="text-teal-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="2" data-category="groups" class="w-4 h-4 rounded"><span class="flex-1">Multiple Cohorts / Paths</span><span class="text-teal-400">+2</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="2" data-category="groups" class="w-4 h-4 rounded"><span class="flex-1">Manual Grouping by Upload</span><span class="text-teal-400">+2</span></label>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="groups-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="groups-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div>
+      </div>
+     </div><!-- Advanced Features -->
+     <div>
+      <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Advanced Features</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+       <!-- Interactivity & Peer -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-lime-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-lime-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.856-1.487M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zM5 20a3 3 0 015.856-1.487M5 10a2 2 0 110-4 2 2 0 010 4z" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-lime-400">Interactivity &amp; Peer Work</h3>
+        </div>
+        <p class="text-slate-400 text-xs mb-2">Ungraded engaging components · select all that apply</p>
+        <div class="space-y-2 mb-4"><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="interactivity" class="w-4 h-4 rounded"><span class="flex-1">Board</span><span class="text-lime-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="interactivity" class="w-4 h-4 rounded"><span class="flex-1">Database</span><span class="text-lime-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="interactivity" class="w-4 h-4 rounded"><span class="flex-1">Peer Share</span><span class="text-lime-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="interactivity" class="w-4 h-4 rounded"><span class="flex-1">Student-facing Glossary</span><span class="text-lime-400">+1</span></label>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="interactivity-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="interactivity-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div><!-- Plugins -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-orange-400">Special Plugins</h3>
+        </div>
+        <p class="text-slate-400 text-xs mb-2">Besides standard plugins · select all that apply</p>
+        <div class="space-y-2 mb-4"><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="0.25" data-category="plugins" class="w-4 h-4 rounded"><span class="flex-1">Low Complexity</span><span class="text-orange-400">+0.25</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="plugins" class="w-4 h-4 rounded"><span class="flex-1">Medium Complexity</span><span class="text-orange-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="2" data-category="plugins" class="w-4 h-4 rounded"><span class="flex-1">High Complexity</span><span class="text-orange-400">+2</span></label>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="plugins-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="plugins-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div><!-- 3rd Party Tools -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.658 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-violet-400">3rd Party Tools or Links</h3>
+        </div>
+        <p class="text-slate-400 text-xs mb-2">Besides Texidium · select all that apply</p>
+        <div class="space-y-2 mb-4"><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="3rd-party" class="w-4 h-4 rounded"><span class="flex-1">Low Complexity</span><span class="text-violet-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="2" data-category="3rd-party" class="w-4 h-4 rounded"><span class="flex-1">Medium Complexity</span><span class="text-violet-400">+2</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="3" data-category="3rd-party" class="w-4 h-4 rounded"><span class="flex-1">High Complexity</span><span class="text-violet-400">+3</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="3rd-party" class="w-4 h-4 rounded"><span class="flex-1">Contains Vulnerable Links</span><span class="text-violet-400">+1</span></label>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="3rd-party-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="3rd-party-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div>
+      </div>
+     </div><!-- External & Personnel Factors -->
+     <div>
+      <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">External &amp; Personnel Factors</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+       <!-- Instructor/TAs -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-pink-400">Instructional Team Factors</h3>
+        </div>
+        <p class="text-slate-400 text-xs mb-2">No multiplier · select all that apply</p>
+        <div class="space-y-2 mb-4"><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="0.25" data-category="instructor" class="w-4 h-4 rounded"><span class="flex-1">Normal Communication</span><span class="text-pink-400">+0.25</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="instructor" class="w-4 h-4 rounded"><span class="flex-1">Low Availability</span><span class="text-pink-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="instructor" class="w-4 h-4 rounded"><span class="flex-1">High-touch Support Relationship</span><span class="text-pink-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="instructor" class="w-4 h-4 rounded"><span class="flex-1">Large Teaching Team (Instructors and/or TAs)</span><span class="text-pink-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-points="1" data-category="instructor" class="w-4 h-4 rounded"><span class="flex-1">New Instructor (to eConcordia or course)</span><span class="text-pink-400">+1</span></label>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="instructor-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="instructor-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div><!-- Platform Access -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-green-400">Instructional Team Platform Access</h3>
+        </div>
+        <p class="text-slate-400 text-xs mb-2">No multiplier · choose one</p>
+        <div class="space-y-2 mb-4"><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="platform-access" data-points="0" data-category="instructor-access" class="w-4 h-4 rounded"><span class="flex-1">No Impact on Complexity</span><span class="text-green-400">+0</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="platform-access" data-points="1" data-category="instructor-access" class="w-4 h-4 rounded"><span class="flex-1">Adds Complexity</span><span class="text-green-400">+1</span></label><label class="checkbox-item flex items-center gap-2 p-2 rounded cursor-pointer text-sm"><input type="checkbox" data-choice-group="platform-access" data-points="-1" data-category="instructor-access" class="w-4 h-4 rounded"><span class="flex-1">Removes Complexity</span><span class="text-green-400">-1</span></label>
+        </div>
+        <div class="border-t border-slate-600 pt-2">
+         <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="instructor-access-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="instructor-access-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+         </div>
+        </div>
+       </div><!-- Other Factors -->
+       <div class="category-card bg-slate-800/50 backdrop-blur rounded-2xl p-5 border border-slate-700/50">
+        <div class="flex items-center gap-3 mb-4">
+         <div class="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m6 2a6 6 0 11-12 0 6 6 0 0112 0zM12 9v2m0 4v2m4-6h2m-6 0h2" />
+          </svg>
+         </div>
+         <h3 class="text-lg font-bold text-red-400">Other Factors</h3>
+        </div>
+        <div class="space-y-3">
+         <div class="border-t border-slate-600 pt-3">
+          <div class="flex items-center gap-2 text-sm"><span class="text-slate-300 font-semibold">Other Complexity:</span><input type="text" placeholder="Description" id="other-factors-other-text" class="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs"><input type="number" min="0" step="0.25" placeholder="pts" id="other-factors-other-pts" class="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
+          </div>
+         </div>
+         <div><label class="block text-slate-300 text-xs font-semibold mb-2">Changes This Semester</label><textarea id="other-factors-comments" placeholder="Describe changes this semester..." class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-indigo-500" rows="3"></textarea>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div><!-- Final Score Section -->
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-center mb-6 shadow-2xl">
+     <p class="text-indigo-200 text-sm font-semibold tracking-wide mb-2">TOTAL OPERATIONAL COMPLEXITY SCORE</p>
+     <div class="text-6xl md:text-7xl font-black text-white mb-2"><span id="final-score">0</span>
+     </div>
+     <p class="text-indigo-100">Points calculated from all selected components</p>
+    </div><!-- Score Breakdown -->
+    <div class="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-slate-700/50 mb-6">
+     <h3 class="text-lg font-bold text-slate-200 mb-4">Score Breakdown</h3>
+     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+      <div class="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+       <p class="text-slate-400 text-xs mb-1">Enrollment</p>
+       <p class="text-blue-400 font-bold text-lg"><span id="breakdown-enrollment">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+       <p class="text-slate-400 text-xs mb-1">Assessments</p>
+       <p class="text-emerald-400 font-bold text-lg"><span id="breakdown-assessments">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+       <p class="text-slate-400 text-xs mb-1">Forums</p>
+       <p class="text-yellow-400 font-bold text-lg"><span id="breakdown-forums">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
+       <p class="text-slate-400 text-xs mb-1">Quizzes</p>
+       <p class="text-purple-400 font-bold text-lg"><span id="breakdown-quizzes">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-rose-500/10 rounded-lg border border-rose-500/20">
+       <p class="text-slate-400 text-xs mb-1">Grading Tools</p>
+       <p class="text-rose-400 font-bold text-lg"><span id="breakdown-grading-tools">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-amber-500/10 rounded-lg border border-amber-500/20">
+       <p class="text-slate-400 text-xs mb-1">Gradebook</p>
+       <p class="text-amber-400 font-bold text-lg"><span id="breakdown-gradebook">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-cyan-500/10 rounded-lg border border-cyan-500/20">
+       <p class="text-slate-400 text-xs mb-1">Manual Intervention</p>
+       <p class="text-cyan-400 font-bold text-lg"><span id="breakdown-manual-intervention">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-lime-500/10 rounded-lg border border-lime-500/20">
+       <p class="text-slate-400 text-xs mb-1">Interactivity</p>
+       <p class="text-lime-400 font-bold text-lg"><span id="breakdown-interactivity">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
+       <p class="text-slate-400 text-xs mb-1">Restrictions</p>
+       <p class="text-indigo-400 font-bold text-lg"><span id="breakdown-restrictions">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-teal-500/10 rounded-lg border border-teal-500/20">
+       <p class="text-slate-400 text-xs mb-1">Groups</p>
+       <p class="text-teal-400 font-bold text-lg"><span id="breakdown-groups">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-violet-500/10 rounded-lg border border-violet-500/20">
+       <p class="text-slate-400 text-xs mb-1">3rd Party</p>
+       <p class="text-violet-400 font-bold text-lg"><span id="breakdown-3rd-party">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-orange-500/10 rounded-lg border border-orange-500/20">
+       <p class="text-slate-400 text-xs mb-1">Plugins</p>
+       <p class="text-orange-400 font-bold text-lg"><span id="breakdown-plugins">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-pink-500/10 rounded-lg border border-pink-500/20">
+       <p class="text-slate-400 text-xs mb-1">Instructor/TAs</p>
+       <p class="text-pink-400 font-bold text-lg"><span id="breakdown-instructor">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+       <p class="text-slate-400 text-xs mb-1">Platform Access</p>
+       <p class="text-green-400 font-bold text-lg"><span id="breakdown-instructor-access">0</span> pts</p>
+      </div>
+      <div class="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
+       <p class="text-slate-400 text-xs mb-1">Other</p>
+       <p class="text-red-400 font-bold text-lg"><span id="breakdown-other-factors">0</span> pts</p>
+      </div>
+     </div>
+    </div><!-- Final Notes -->
+    <div class="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-slate-700/50 mb-6">
+     <h3 class="text-lg font-bold text-slate-200 mb-4">Final Context Note</h3><textarea id="final-notes" placeholder="Add final context..." class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm" rows="4"></textarea>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center mb-10">
+     <button type="button" onclick="downloadReport('pdf')" class="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-semibold shadow-lg transition">Download PDF</button>
+     <button type="button" onclick="downloadReport('xlsx')" class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold shadow-lg transition">Download Excel</button>
+     <button type="button" onclick="resetCalculator()" class="px-6 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-semibold transition">Reset</button>
+    </div>
+   </div>
+  </div>
+  </form>
+  <script>
+   const defaultConfig = { app_title: 'ICC Course Operational Complexity', font_family: 'Space Grotesk', font_size: 16 };
+   let config = { ...defaultConfig };
+
+   function addQuantityInputs() {
+    document.querySelectorAll('input[type="checkbox"][data-category]').forEach((checkbox, index) => {
+     const label = checkbox.closest('label');
+     const pointsDisplay = label?.querySelector('span:last-child');
+     if (!label || !pointsDisplay || label.querySelector('.quantity-input')) return;
+     const control = document.createElement('span');
+     control.className = 'qty-control';
+     control.innerHTML = `<span>Qty</span><input type="number" min="0" max="10000" step="1" value="0" class="quantity-input" aria-label="Quantity for component ${index + 1}">`;
+     control.querySelector('input').addEventListener('click', event => event.stopPropagation());
+     label.insertBefore(control, pointsDisplay);
+    });
+
+    document.querySelectorAll('input[id$="-other-pts"], #manual-intervention-gamification-pts').forEach((pointsInput, index) => {
+     if (document.getElementById(`${pointsInput.id}-qty`)) return;
+     pointsInput.parentElement?.classList.add('custom-entry-row');
+     const control = document.createElement('span');
+     control.className = 'qty-control';
+     control.innerHTML = `<span>Qty</span><input id="${pointsInput.id}-qty" type="number" min="0" max="10000" step="1" value="0" class="quantity-input" aria-label="Custom quantity ${index + 1}">`;
+     pointsInput.insertAdjacentElement('afterend', control);
+    });
+   }
+
+   function quantityFor(element) {
+    return Math.max(0, parseInt(element?.value || '0', 10) || 0);
+   }
+
+   function enforceExclusiveChoice(checkbox) {
+    if (!checkbox.checked || !checkbox.dataset.choiceGroup) return;
+    document.querySelectorAll(`input[data-choice-group="${checkbox.dataset.choiceGroup}"]`).forEach(option => {
+     if (option === checkbox) return;
+     option.checked = false;
+     const otherQuantity = option.closest('label')?.querySelector('.quantity-input');
+     if (otherQuantity) otherQuantity.value = 0;
+    });
+   }
+
+   function syncFromCheckbox(checkbox) {
+    const quantityInput = checkbox.closest('label')?.querySelector('.quantity-input');
+    if (!quantityInput) return;
+    if (checkbox.checked && quantityFor(quantityInput) === 0) quantityInput.value = 1;
+    if (!checkbox.checked) quantityInput.value = 0;
+    enforceExclusiveChoice(checkbox);
+   }
+
+   function syncFromQuantity(quantityInput) {
+    const checkbox = quantityInput.closest('label')?.querySelector('input[type="checkbox"][data-category]');
+    if (!checkbox) return;
+    checkbox.checked = quantityFor(quantityInput) > 0;
+    enforceExclusiveChoice(checkbox);
+   }
+
+   function calculateScore() {
+    let total = 0;
+    let breakdown = {
+     assessments: 0, forums: 0, quizzes: 0,
+     'grading-tools': 0, gradebook: 0, 'manual-intervention': 0,
+     interactivity: 0, restrictions: 0, groups: 0,
+     '3rd-party': 0, plugins: 0, instructor: 0, 'instructor-access': 0, 'other-factors': 0
+    };
+
+    document.querySelectorAll('input[type="checkbox"][data-category]').forEach(cb => {
+     const quantity = quantityFor(cb.closest('label')?.querySelector('.quantity-input'));
+     if (quantity === 0) return;
+     const category = cb.dataset.category;
+     const unitPoints = parseFloat(cb.dataset.points) || 0;
+     const points = unitPoints * quantity;
+     if (breakdown.hasOwnProperty(category)) {
+      breakdown[category] += points;
+      total += points;
+     }
+    });
+
+    ['assessments', 'forums', 'quizzes', 'grading-tools', 'gradebook', 'manual-intervention', 'interactivity', 'restrictions', 'groups', '3rd-party', 'plugins', 'instructor', 'instructor-access', 'other-factors'].forEach(cat => {
+     const pts = document.getElementById(`${cat}-other-pts`);
+     if (pts && pts.value) {
+      const quantity = quantityFor(document.getElementById(`${pts.id}-qty`));
+      const points = (parseFloat(pts.value) || 0) * quantity;
+      breakdown[cat] += points;
+      total += points;
+     }
+    });
+
+    const gamificationInput = document.getElementById('manual-intervention-gamification-pts');
+    const gamificationPoints = (parseFloat(gamificationInput?.value) || 0) * quantityFor(document.getElementById(`${gamificationInput.id}-qty`));
+    breakdown['manual-intervention'] += gamificationPoints;
+    total += gamificationPoints;
+
+    const classCapValue = parseInt(document.getElementById('class-cap').value) || 0;
+    let classCapPoints = 0;
+    if (classCapValue >= 1000) {
+     classCapPoints = 2;
+    } else if (classCapValue >= 600) {
+     classCapPoints = 1;
+    }
+    total += classCapPoints;
+    document.getElementById('breakdown-enrollment').textContent = classCapPoints;
+
+    Object.keys(breakdown).forEach(key => {
+     const el = document.getElementById(`breakdown-${key}`);
+     if (el) el.textContent = Number(breakdown[key].toFixed(2));
+    });
+
+    document.getElementById('final-score').textContent = Number(total.toFixed(2));
+   }
+
+   function updateUI() {
+    calculateScore();
+   }
+
+   addQuantityInputs();
+
+   document.querySelectorAll('input[type="checkbox"], input[type="radio"], input[type="number"], input[type="text"], input[type="date"], select, textarea').forEach(el => {
+    el.addEventListener('change', () => {
+     if (el.matches('input[type="checkbox"][data-category]')) syncFromCheckbox(el);
+     if (el.matches('.quantity-input') && el.closest('label')) syncFromQuantity(el);
+     updateUI();
+    });
+    el.addEventListener('input', () => {
+     if (el.matches('.quantity-input') && el.closest('label')) syncFromQuantity(el);
+     updateUI();
+    });
+   });
+
+   function buildPayload() {
+    const selected = Array.from(document.querySelectorAll('input[type="checkbox"][data-category]'))
+     .filter(cb => quantityFor(cb.closest('label')?.querySelector('.quantity-input')) > 0)
+     .map(cb => ({
+     category: cb.dataset.category,
+     points: Number(cb.dataset.points || 0),
+     quantity: quantityFor(cb.closest('label')?.querySelector('.quantity-input')),
+     label: cb.closest('label')?.querySelector('.flex-1')?.textContent.trim() || 'Selected component'
+    }));
+    const custom = {};
+    Object.keys({assessments:1, forums:1, quizzes:1, 'grading-tools':1, gradebook:1, 'manual-intervention':1,
+     interactivity:1, restrictions:1, groups:1, '3rd-party':1, plugins:1, instructor:1, 'instructor-access':1, 'other-factors':1}).forEach(category => {
+      custom[category] = {
+       description: document.getElementById(`${category}-other-text`)?.value || '',
+       points: Number(document.getElementById(`${category}-other-pts`)?.value || 0),
+       quantity: quantityFor(document.getElementById(`${category}-other-pts-qty`))
+      };
+    });
+    return {
+     meta: {
+      class_code: document.getElementById('class-code').value,
+      class_cap: Number(document.getElementById('class-cap').value || 0),
+      filled_by: document.getElementById('filled-by').value,
+      date: document.getElementById('form-date').value,
+      semester: document.getElementById('semester').value,
+      year: document.getElementById('year').value
+     },
+     selected, custom,
+     gamification_points: Number(document.getElementById('manual-intervention-gamification-pts')?.value || 0),
+     gamification_quantity: quantityFor(document.getElementById('manual-intervention-gamification-pts-qty')),
+     context: document.getElementById('other-factors-comments').value,
+     notes: document.getElementById('final-notes').value
+    };
+   }
+
+   function downloadReport(kind) {
+    const form = document.getElementById('calculator-form');
+    document.getElementById('export-payload').value = JSON.stringify(buildPayload());
+    form.action = `/export/${kind}`;
+    form.submit();
+   }
+
+   function resetCalculator() {
+    if (!confirm('Clear all calculator entries?')) return;
+    document.getElementById('calculator-form').reset();
+    document.getElementById('form-date').value = new Date().toISOString().slice(0, 10);
+    calculateScore();
+   }
+
+   if (!document.getElementById('form-date').value) document.getElementById('form-date').value = new Date().toISOString().slice(0, 10);
+   updateUI();
+  </script>
+ </body>
+</html>
